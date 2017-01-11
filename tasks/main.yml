@@ -1,0 +1,56 @@
+# Copyright 2017 Yanis Guenane <yguenane@redhat.com>
+# Author: Yanis Guenane <yguenane@redhat.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+- name: Incluse OS-specific variables
+  include_vars: '{{ ansible_os_family }}.yml'
+
+
+- name: Install the Rally packages
+  package:
+    name: '{{ rally_package_name }}'
+
+
+- name: Install the Rally configuration file
+  file:
+    path: /etc/rally/rally.conf
+    state: touch
+
+
+- name: Check for db
+  shell: source ~/overcloudrc && rally deployment list
+  changed_when: false
+  failed_when: false
+  register: rally_deployment_list_result
+
+
+- name: Create/upgrade Rally DB schema
+  shell: source ~/overcloudrc && rally-manage db create
+  when:
+    - rally_deployment_list_result.stdout | search("Table 'rally.deployments' doesn't exist")
+
+
+- name: Check for existing Rally deployment
+  shell: source ~/overcloudrc && rally deployment list
+  changed_when: false
+  failed_when: false
+  register: rally_deployment_list_result
+
+
+- name: Setup the Rally deployment
+  shell: |
+    source ~/overcloudrc && rally deployment create --fromenv --name=existing
+  when:
+    - rally_deployment_list_result.stdout | search("There are no deployments")
