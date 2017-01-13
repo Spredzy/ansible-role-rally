@@ -1,4 +1,0 @@
----
-rally_scenarios:
-  - /home/stack/rally/samples/tasks/scenarios/keystone/add-and-remove-user-role.yaml
-  - /home/stack/rally/samples/tasks/scenarios/keystone/create-add-and-list-user-roles.yaml
