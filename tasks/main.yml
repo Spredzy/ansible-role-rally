@@ -24,13 +24,6 @@
     name: '{{ rally_package_name }}'
 
 
-- name: Install the Rally configuration file
-  become: true
-  file:
-    path: /etc/rally/rally.conf
-    state: touch
-
-
 - name: Check for db
   shell: source ~/overcloudrc && rally deployment list
   changed_when: false
@@ -58,27 +51,19 @@
     - rally_deployment_list_result.stdout | search("There are no deployments")
 
 
-- block:
-  # TODO (spredzy): Look for a better way to do that
-  # This is only a quick hack to make sure the solution is viable
-  - name: Empty previous file
-    shell: echo '' > ~/rally-tasks.yml
+- name: Retrieve the rally scenario file
+  get_url:
+    url: '{{ rally_file_location }}'
+    dest: '{{ rally_scenario_filepath }}'
+  when: rally_file_location is defined
 
-  - name: Consolidate in one file
-    shell: cat {{ item }} >> ~/rally-tasks.yml
-    with_items: '{{ rally_scenarios | default([]) }}'
 
-  - name: Cleanup
-    shell: sed -i '/---/d' ~/rally-tasks.yml && sed -i '1i ---' ~/rally-tasks.yml
-  # END
+- name: Run specified scenarios
+  shell: source ~/overcloudrc && rally task start '{{ rally_scenario_filepath }}' && rally task report --junit --out rally.xml
 
-  - name: Run specified scenarios
-    shell: source ~/overcloudrc && rally task start ~/rally-tasks.yml && rally task report --junit --out rally.xml
 
-  - name: Fetch junit results
-    fetch:
-      src: ~/rally.xml
-      dest: "{{ lookup('env', 'PWD') }}/rally.xml"
-      flat: yes
-
-  when: rally_scenarios is defined
+- name: Fetch junit results
+  fetch:
+    src: ~/rally.xml
+    dest: "{{ lookup('env', 'PWD') }}/{{ rally_result_filename }}"
+    flat: yes
