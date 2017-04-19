@@ -40,8 +40,7 @@
 
 - name: Create/upgrade Rally DB schema
   shell: source ~/overcloudrc && rally-manage db recreate
-  when:
-    - rally_deployment_list_result.stdout | search("Looks like Rally can't connect to it's DB")
+  when: rally_deployment_list_result.rc == 1
 
 
 - name: Check for existing Rally deployment
